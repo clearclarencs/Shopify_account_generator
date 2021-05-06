@@ -1,19 +1,60 @@
 #cdg-acc-gen.py
-import random, requests, time
-from python_anticaptcha import AnticaptchaClient, NoCaptchaTaskProxylessTask
+import random, requests, time, threading
+from capmonster_python import NoCaptchaTask
 characters=['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',"1","2","3","4","5","6","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"]
-firstnames=['Annabelle', 'Jason', 'Michael', 'Austin', 'Alva', 'Acacius', 'Tate', 'Diego', 'Easton', 'Lucius', 'Cash', 'Ash', 'Luca', 'Adah', 'Reese', 'Mika', 'Paisley', 'Amina', 'Teagan', 'Nova', 'Aura', 'Pearl', 'Billie', 'Oliver', 'George', 'Harry', 'Noah', 'Jack', 'Charlie', 'Leo', 'Jacob', 'Freddie', 'Alfie', 'Archie', 'Theo', 'Oscar', 'Arthur', 'Thomas', 'Logan', 'Henry', 'Joshua', 'James', 'William', 'Max', 'Isaac', 'Lucas', 'Ethan', 'Teddy', 'Finley', 'Mason', 'Harrison', 'Hunter', 'Alexander', 'Daniel', 'Joseph', 'Tommy', 'Arlo', 'Reggie', 'Edward', 'Jaxon', 'Adam', 'Sebastian', 'Rory', 'Riley', 'Dylan', 'Elijah', 'Carter', 'Albie', 'Louie', 'Toby', 'Benjamin', 'Reuben', 'Jude', 'Samuel', 'Harley', 'Luca', 'Frankie', 'Ronnie', 'Jenson', 'Hugo', 'Jake', 'David', 'Theodore', 'Roman', 'Bobby', 'Alex', 'Caleb', 'Ezra', 'Ollie', 'Finn', 'Jackson', 'Zachary', 'Jayden', 'Harvey', 'Albert', 'Lewis', 'Blake', 'Stanley', 'Elliot', 'Grayson', 'Liam', 'Louis', 'Matthew', 'Elliott', 'Tyler', 'Luke', 'Michael', 'Gabriel', 'Ryan', 'Dexter', 'Kai', 'Jesse', 'Leon', 'Nathan', 'Ellis', 'Connor', 'Jamie', 'Rowan', 'Sonny', 'Dominic', 'Eli', 'Aaron', 'Jasper', 'Olivia', 'Amelia', 'Isla', 'Ava', 'Emily', 'Sophia', 'Grace', 'Mia', 'Poppy', 'Ella', 'Lily', 'Evie', 'Isabella', 'Sophie', 'Ivy', 'Freya', 'Harper', 'Willow', 'Charlotte', 'Jessica', 'Rosie', 'Daisy', 'Alice', 'Elsie', 'Sienna', 'Florence', 'Evelyn', 'Phoebe', 'Aria', 'Ruby', 'Isabelle', 'Esme', 'Scarlett', 'Matilda', 'Sofia', 'Millie', 'Eva', 'Layla', 'Chloe', 'Luna', 'Maisie', 'Lucy', 'Erin', 'Eliza', 'Ellie', 'Mila', 'Imogen', 'Bella', 'Lola', 'Molly', 'Maya', 'Violet', 'Lilly', 'Holly', 'Thea', 'Emilia', 'Hannah', 'Penelope', 'Harriet', 'Georgia', 'Emma', 'Lottie', 'Nancy', 'Rose', 'Amber', 'Elizabeth', 'Gracie', 'Zara', 'Darcie', 'Summer', 'Hallie', 'Aurora', 'Ada', 'Anna', 'Orla', 'Robyn', 'Bonnie', 'Abigail', 'Darcy', 'Eleanor', 'Arabella', 'Lexi', 'Clara', 'Heidi', 'Lyla', 'Annabelle', 'Jasmine', 'Nevaeh', 'Victoria', 'Amelie', 'Myla', 'Maria', 'Julia', 'Niamh', 'Mya', 'Annie', 
-'Darcey', 'Zoe', 'Felicity', 'Iris']
-lastnames=['Stockley', 'Smith', 'Trinder', 'Skipworth', 'Percival', 'Wordley', 'Hobbs', 'Lewington', 'Illiffe', 'Jones', 'Brown', 'Taylor', 'Wilson', 'Davies', 'Evans', 'Johnson', 'Thomas', 'Roberts', 'Walker', 'Wright', 'Thompson', 'Robinson', 'White', 'Hall', 'Hughes', 'Green', 'Edwards', 'Martin', 'Wood', 'Clarke', 'Harris', 'Jackson', 'Lewis', 'Clark', 'Turner','Smith']
-anticaptcha_key=input("Anticaptcha key: ")
-amount=int(input("Amount: "))
-catchall=input("Catchall eg@akchefs.com: ")
+capmonsterkey=input("Capmonster key (None if not required): ")
+delay = int(input("Delay in seconds: "))
+def find_code(text, target, length):
+    resplist=str(text).split(target)
+    return(resplist[1][0:length])
+    
+def proxy_format(proxy):
+    try:
+        if proxy[len(proxy)-1]=="\n":
+            proxy= proxy[0:len(proxy)-1]
+        try:
+            proxylist=proxy.split(":")
+            if len(proxylist)==2:
+                proxy=proxy
+            elif len(proxylist)==4:
+                proxy=str(proxylist[2])+":"+str(proxylist[3])+"@"+str(proxylist[0])+":"+str(proxylist[1])
+            else:
+                return False
+            return{
+                    "http":"http://"+proxy,
+                    "https":"https://"+proxy,
+                    "ftp":"ftp://"+proxy
+                }
+        except:
+            return False
+    except:
+        return False
 while True:
-    domain=input("Shopify site eg \"https://uk.cdgcdgcdg.com\": " )
-    if domain.count("/")==2:
-        break
-    else:
-        print("Incorrect url, must be exactly as shown.")
+    try:
+        domain=input("Shopify site eg \"https://uk.cdgcdgcdg.com\": " )
+        proxy_bool=input("Use proxies.txt? (y/n): ")
+        if proxy_bool=="y":
+            proxy_bool=True
+            worked=True
+        elif proxy_bool=="n":
+            proxy_bool=False
+            worked=True
+        else:
+            proxy_bool=False
+            worked=False
+        if proxy_bool:
+            try:
+                with open("proxies.txt","r") as r:
+                    proxies=r.read().splitlines()
+            except:
+                print("Unable to open proxies.txt, ensure file is in same directory")
+                worked=False
+        if domain.count("/")==2 and worked==True:
+            break
+        else:
+            print("Incorrect info, must be exactly as shown.")
+    except:
+        print("Error try again, ensure amount is a number.")
 
 
 headers={
@@ -34,21 +75,17 @@ headers={
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36"
 }
 
-def find_code(text, target, length):
-    resplist=str(text).split(target)
-    return(resplist[1][0:length])
-
 print("Creating accounts for "+domain+" if the site requires captcha this could take a while.")
 
-for i in range(amount):
+def setup(proxy, data):
     sesh=requests.session()
-    email=""
-    passw=""
-    for i in range(10):
-        email+=random.choice(characters)
-    email+=catchall
-    for i in range(10):
-        passw+=random.choice(characters)
+    if proxy != "False":
+        proxydict=proxy_format(proxy)
+        if proxydict == False:
+            print("Invalid proxy: "+str(proxy))
+            return
+    else:
+        proxydict=False
     try:
         sesh.get(domain+"/account/register")
     except:
@@ -58,38 +95,57 @@ for i in range(amount):
     data={
         "form_type": "create_customer",
         "utf8": "✓",
-        "customer[last_name]": random.choice(lastnames),
-        "customer[first_name]": random.choice(firstnames),
-        "customer[email]": email,
-        "customer[password]":passw,
+        "customer[last_name]": task.split(",")[3],
+        "customer[first_name]": task.split(",")[2],
+        "customer[email]": task.split(",")[0],
+        "customer[password]":task.split(",")[1],
         "terms_and_conditions": "1"
     }
-    resp=sesh.post(domain+"/account",data=data,headers=headers)
+    resp=sesh.post(domain+"/account",data=data,headers=headers, proxies=proxydict)
     if str(resp.history).startswith("[<Response [302]>]"):
         if resp.url.startswith(domain+"/challenge"):
             try:
-                auth_token=find_code(resp.text,"authenticity_token\" value=\"",86)
-                captcha_token=find_code(resp.text,"sitekey: \"",40)
-                client = AnticaptchaClient(anticaptcha_key)
-                task = NoCaptchaTaskProxylessTask(domain+"/challenge", captcha_token)
-                job = client.createTask(task)
-                job.join()
-                captcha_response=job.get_solution_response()
-                data={
-                    "authenticity_token": auth_token,
-                    "g-recaptcha-response":captcha_response
-                }
+                capmonster = NoCaptchaTask(client_key=capmonsterkey)
+                taskId = capmonster.createTask(website_key=sitecapkey, website_url=prodlink)
+                response = capmonster.joinTaskResult(taskId=taskId, maximum_time=300)
             except:
-                print("Error contacting anti-captcha")
-            res=sesh.post(domain+"/account",headers=headers,data=data)
+                print("Error getting captcha")
+            res=sesh.post(domain+"/account",headers=headers,data=data, proxies=proxydict)
             if str(res.status_code)=="200":
-                print(email+":"+passw)
+                print(task.split(",")[0]+":"+task.split(",")[1])
             else:
                 print("Error submitting captcha")
         else:
-            print(email+":"+passw)
+            try:
+                with open("accounts.txt", "a+") as r:
+                    r.write(task.split(",")[0]+":"+task.split(",")[1]+"\n")
+            except:
+                print(task.split(",")[0]+":"+task.split(",")[1])
     else:
         print("Error creating account")
+    #except:
+     #   print("Error occured")
 
-    
-    
+try:
+    with open("accounts.txt", "a+") as r:
+        r.write(domain+":\n")
+except:
+    None  
+with open("tasks.csv", "r") as r:
+    tasks=r.read().splitlines()
+    tasks.pop(0)
+for task in tasks:
+    if proxy_bool:
+        try:
+            proxy=random.choice(proxies)
+        except:
+            print("Proxy error, ensure you have proxies in proxies.txt")
+            break
+    if proxy_bool:
+        x = threading.Thread(target=setup, args=(proxy, task))
+    else:
+        x = threading.Thread(target=setup, args=("False", task))
+    x.start()
+    time.sleep(delay)
+while True:
+    input("Finished")
